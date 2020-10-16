@@ -1,3 +1,4 @@
+
 DROP TABLE IF EXISTS java_quiz;
 DROP TABLE IF EXISTS users;
 CREATE SEQUENCE global_seq START WITH 100000;
@@ -11,6 +12,7 @@ CREATE TABLE users
     high_score INTEGER             DEFAULT 0     NOT NULL,
     bot_state  VARCHAR                           NOT NULL
 );
+CREATE UNIQUE INDEX users_unique_chatid_idx ON users (chat_id);
 
 CREATE TABLE java_quiz
 (
