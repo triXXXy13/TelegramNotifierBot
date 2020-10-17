@@ -1,75 +1,84 @@
 package com.thebytefox.telegram.bot;
 
-import com.thebytefox.telegram.bot.handler.Handler;
-import com.thebytefox.telegram.model.User;
-import com.thebytefox.telegram.repository.JpaUserRepository;
+import com.thebytefox.telegram.annotations.BotCommand;
+import com.thebytefox.telegram.bot.handler.AbstractBaseHandler;
+import com.thebytefox.telegram.service.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
+import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
-import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 
+import static com.thebytefox.telegram.util.TelegramUtil.extractCommand;
+
+/**
+ * Main class used to handle incoming Updates.
+ * Chooses suitable inheritor of AbstractBaseHandler to handle the input
+ */
 @Component
+@Slf4j
 public class UpdateReceiver {
-    // Храним доступные хендлеры в списке
-    private final List<Handler> handlers;
-    // Имеем доступ в базу пользователей
-    private final JpaUserRepository userRepository;
+    private final List<AbstractBaseHandler> handlers;
+    private final UserService userService;
 
-    public UpdateReceiver(List<Handler> handlers, JpaUserRepository userRepository) {
+    public UpdateReceiver(List<AbstractBaseHandler> handlers, UserService userService) {
         this.handlers = handlers;
-        this.userRepository = userRepository;
+        this.userService = userService;
     }
 
-    // Обрабатываем полученный Update
-    public List<PartialBotApiMethod<? extends Serializable>> handle(Update update) {
-        // try-catch, чтобы при несуществующей команде просто возвращать пустой список
+    /**
+     * Analyzes received update and chooses correct handler if possible
+     *
+     * @param update
+     * @return list of SendMessages to execute
+     */
+    public List<BotApiMethod<Message>> handle(Update update) {
         try {
-            // Проверяем, если Update - сообщение с текстом
+            int userId = 0;
+            String text = null;
+
             if (isMessageWithText(update)) {
-                // Получаем Message из Update
                 final Message message = update.getMessage();
-                // Получаем айди чата с пользователем
-                final int chatId = message.getFrom().getId();
-
-                // Просим у репозитория пользователя. Если такого пользователя нет - создаем нового и возвращаем его.
-                // Как раз на случай нового пользователя мы и сделали конструктор с одним параметром в классе User
-                final User user = userRepository.getByChatId(chatId)
-                        .orElseGet(() -> userRepository.save(new User(chatId)));
-                // Ищем нужный обработчик и возвращаем результат его работы
-                return getHandlerByState(user.getBotState()).handle(user, message.getText());
-
+                userId = message.getFrom().getId();
+                text = message.getText();
+                log.debug("Update is text message {} from {}", text, userId);
             } else if (update.hasCallbackQuery()) {
                 final CallbackQuery callbackQuery = update.getCallbackQuery();
-                final int chatId = callbackQuery.getFrom().getId();
-                final User user = userRepository.getByChatId(chatId)
-                        .orElseGet(() -> userRepository.save(new User(chatId)));
+                userId = callbackQuery.getFrom().getId();
+                text = callbackQuery.getData();
+                log.debug("Update is callbackquery {} from {}", text, userId);
+            }
 
-                return getHandlerByCallBackQuery(callbackQuery.getData()).handle(user, callbackQuery.getData());
+            if (text != null && userId != 0) {
+                return getHandler(text).authorizeAndHandle(userService.getOrCreate(userId), text);
             }
 
             throw new UnsupportedOperationException();
         } catch (UnsupportedOperationException e) {
+            log.debug("Command: {} is unsupported", update.toString());
             return Collections.emptyList();
         }
     }
 
-    private Handler getHandlerByState(State state) {
+    /**
+     * Selects handler which can handle received command
+     *
+     * @param text content of received message
+     * @return handler suitable for command
+     */
+    private AbstractBaseHandler getHandler(String text) {
         return handlers.stream()
-                .filter(h -> h.operatedBotState() != null)
-                .filter(h -> h.operatedBotState().equals(state))
-                .findAny()
-                .orElseThrow(UnsupportedOperationException::new);
-    }
-
-    private Handler getHandlerByCallBackQuery(String query) {
-        return handlers.stream()
-                .filter(h -> h.operatedCallBackQuery().stream()
-                        .anyMatch(query::startsWith))
+                .filter(h -> h.getClass()
+                        .isAnnotationPresent(BotCommand.class))
+                .filter(h -> Stream.of(h.getClass()
+                        .getAnnotation(BotCommand.class)
+                        .command())
+                        .anyMatch(c -> c.equalsIgnoreCase(extractCommand(text))))
                 .findAny()
                 .orElseThrow(UnsupportedOperationException::new);
     }

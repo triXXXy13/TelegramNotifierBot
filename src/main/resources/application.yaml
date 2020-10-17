@@ -1,3 +1,48 @@
+spring:
+  profiles:
+    active: test
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    initialization-mode: never
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+bot:
+  admin: 87971601
+  server:
+    hour:
+      offset: 3
+  cron: 0 * * * * MON-FRI
+json:
+  customer:
+    url:
+    cron: 0 30 8 * * MON-FRI
+  employee:
+    url:
+    cron: 0 30 3 * * MON-FRI
+logging:
+  level:
+    com.whiskels.telegrambot: info
+---
+spring:
+  profiles: test
+  datasource:
+    #           Test database
+    url: jdbc:postgresql://localhost:5432/telegram_bot_test
+    username: user
+    password: password
+bot:
+  name: TelegramNotifireBot
+  token:
+---
+spring:
+  profiles: war
+  datasource:
+    url: ${JDBC_DATABASE_URL}
+    username: ${JDBC_DATABASE_USERNAME}
+    password: ${JDBC_DATABASE_PASSWORD}
 bot:
   name: TheByteFoxBot
   token: 1376500093:AAFNVrrpsqLXOb5zmhvSQGl33fGK_7COxZE

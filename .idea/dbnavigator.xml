@@ -23,13 +23,7 @@
     <autoscroll-to-editor value="false" />
     <autoscroll-from-editor value="true" />
     <show-object-properties value="true" />
-    <loaded-nodes>
-      <connection connection-id="5f0d27ea-4ad7-4bea-a926-bdbd46c8d4a2">
-        <schema name="information_schema" object-types="table, view, function, sequence" />
-        <schema name="pg_catalog" object-types="table, function" />
-        <schema name="public" object-types="dataset trigger, table, constraint, view, index, function, sequence, column" />
-      </connection>
-    </loaded-nodes>
+    <loaded-nodes />
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="5f0d27ea-4ad7-4bea-a926-bdbd46c8d4a2">
@@ -44,9 +38,6 @@
   </component>
   <component name="DBNavigator.Project.EditorStateManager">
     <last-used-providers />
-  </component>
-  <component name="DBNavigator.Project.FileConnectionMappingManager">
-    <mapping file-url="file://$PROJECT_DIR$/src/main/resources/initDB.sql" connection-id="5f0d27ea-4ad7-4bea-a926-bdbd46c8d4a2" session-id="MAIN" current-schema="public" />
   </component>
   <component name="DBNavigator.Project.MethodExecutionManager">
     <method-browser />
